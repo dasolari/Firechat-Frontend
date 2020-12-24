@@ -1,36 +1,43 @@
 <template>
-  <div>
-    <h1>{{ message }}</h1>
+  <div class="form-container">
+    <h2>{{ message }}</h2>
     <form>
-      <div class="form-group">
+      <div class="group">
         <label for="username">Username:</label>
         <input type="text" id="username" name="username" maxLength="25" v-model="username" required />
       </div>
-      <div class="form-group">
+      <div class="group">
         <label for="email">Email:</label>
         <input type="email" id="email" name="email" v-model="email" required />
-        <p class="alert" v-if="emailErrors['format']">{{ emailErrors['format'] }}</p>
+        <p class="warning-alert abs" v-if="invalidEmail">This must be an email</p>
       </div>
-      <div class="form-group">
+      <div class="group">
         <label for="password">Password:</label>
         <input type="password" id="password" name="password" v-model="password" required />
-        <p class="alert" v-if="passwordErrors['len']">{{ passwordErrors['len'] }}</p>
-        <p class="alert" v-if="passwordErrors['upper']">{{ passwordErrors['upper'] }}</p>
-        <p class="alert" v-if="passwordErrors['number']">{{ passwordErrors['number'] }}</p>
+        <p class="warning-alert" v-if="invalidPasswordLength">Password must be greater than 7 characters</p>
+        <p class="warning-alert" v-if="invalidPasswordUppercase">Password must have at least 1 uppercase character</p>
+        <p class="warning-alert" v-if="invalidPasswordNumber">Password must have at least 1 number</p>
       </div>
-      <div class="form-group">
+      <div class="group">
         <label for="confirm-password">Confirm Password:</label>
         <input type="password" id="confirm-password" name="confirm-password" v-model="confirmPassword" required />
-        <p class="alert" v-if="confPasswordErrors['equals']">{{ confPasswordErrors['equals'] }}</p>
+        <p class="warning-alert abs" v-if="invalidConfirmPassword">Passwords don't match</p>
       </div>
       <div class="from-submit">
-        <button @click="submit" :disabled="!(username && email && password && password === confirmPassword)">Sign Up</button>
+        <p id="submit-warning-alert">Fix your current fields</p>
+        <b-button variant="outline-success" @click="submit">Sign Up</b-button>
       </div>
     </form>
+    <div class="error" v-if="error">{{ error.message }}</div>
   </div>
 </template>
 
 <script>
+import * as firebase from 'firebase/app';
+import 'firebase/auth';
+const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+const pu = /[A-Z]/;
+const pn = /\d/;
 export default {
   name: 'SignUp',
   props: {
@@ -45,60 +52,68 @@ export default {
       email: '',
       password: '',
       confirmPassword: '',
-      emailErrors: [],
-      passwordErrors: [],
-      confPasswordErrors: []
+      error: ''
     }
   },
-  watch: {
-    email(value) {
-      this.validateEmail(value);
+  computed: {
+    invalidEmail() {
+      return this.email && !(re.test(this.email));
     },
-    password(value) {
-      this.validatePassword(value);
+    invalidPasswordLength() {
+      return this.password && this.password.length < 8;
     },
-    confirmPassword(value) {
-      this.validateConfirmPassword(value);
+    invalidPasswordUppercase() {
+      return this.password && !(pu.test(this.password));
+    },
+    invalidPasswordNumber() {
+      return this.password && !(pn.test(this.password));
+    },
+    invalidConfirmPassword() {
+      return this.confirmPassword && !(this.confirmPassword === this.password);
     }
   },
   methods: {
     async submit(event) {
       event.preventDefault();
-      console.log('Form submitted');
-      console.log({ username: this.username, email: this.email, password: this.password });
-    },
-    validateEmail(value) {
-      const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-      if (value) {
-        re.test(value) ? this.emailErrors['format'] = '' : this.emailErrors['format'] = 'This must be an email';
+      if (!this.validate()) {
+        const submitAlert = document.getElementById('submit-warning-alert');
+        submitAlert.style.display = 'inline';
+        setTimeout(() => { submitAlert.style.display = 'none'; }, 3000);
       } else {
-        this.emailErrors = [];
+        const anotherUser = await firebase.default.auth().currentUser;
+        if (!anotherUser) {
+          try {
+            const { user } = await firebase.default.auth().createUserWithEmailAndPassword(this.email, this.password);
+            await user.updateProfile({ displayName: this.username });
+            await user.sendEmailVerification();
+            localStorage.setItem('user', JSON.stringify(user));
+            this.$emit('created', 'Sent email');
+          } catch(err) {
+            this.error = err;
+            setTimeout(() => { this.error = ''; }, 8000);
+          }
+        } else {
+          this.error = { message: 'Logout from your current account' };
+          setTimeout(() => { this.error = ''; }, 8000);
+        }
       }
     },
-    validatePassword(value) {
-      if (value) {
-        this.password.length >= 8 ? this.passwordErrors['len'] = '' : this.passwordErrors['len'] = 'Password must be greater than 7 characters';
-        /[A-Z]/.test(value) ? this.passwordErrors['upper'] = '' : this.passwordErrors['upper'] = 'Password must have at least 1 uppercase character';
-        /\d/.test(value) ? this.passwordErrors['number'] = '' : this.passwordErrors['number'] = 'Password must have at least 1 number';
-      } else {
-        this.passwordErrors = [];
-      }
-    },
-    validateConfirmPassword(value) {
-      if (value) {
-        value === this.password ? this.confPasswordErrors['equals'] = '' : this.confPasswordErrors['equals'] = "Passwords don't match";
-      } else {
-        this.confPasswordErrors = [];
-      }
+    validate() {
+      const E = re.test(this.email);
+      const PL = this.password.length >= 8;
+      const PU = pu.test(this.password);
+      const PN = pn.test(this.password);
+      const CP = this.password === this.confirmPassword;
+      return this.username && E && PL && PU && PN && CP;
     }
   }
 };
 </script>
 
 <style lang="scss" scoped>
+.form-container {
   form {
-    margin: 5px 25vw;
-    .form-group {
+    .group {
       display: block;
       padding: 10px 0px;
       margin: 8px 0;
@@ -117,27 +132,38 @@ export default {
           border-bottom: 3px solid #42b983;
         }
       }
-      .alert {
+      input:-webkit-autofill,
+      input:-webkit-autofill:hover,
+      input:-webkit-autofill:focus,
+      input:-webkit-autofill:active {
+          transition: background-color 5000s ease-in-out 0s;
+      }
+      .warning-alert {
         color: red;
         margin: 0;
         font-size: 0.8em;
       }
+      .abs {
+        position: absolute;
+      }
     }
     .from-submit {
       text-align: right;
-      button {
-        background-color: #42b983;
-        border: none;
-        border-radius: 5px;
-        color: #2c3e50;
-        padding: 10px 20px;
-        font-size: 1em;
-        transition: 0.4s;
-        &:disabled {
-          background: #42b983b7;
-          color: #2c3e50a1;
-        }
+      position: relative;
+      #submit-warning-alert {
+        position: absolute;
+        color: red;
+        top: 8px;
+        right: 90px;
+        font-size: 0.8em;
+        display: none;
       }
     }
   }
+  .error {
+    // margin-top: 10px;
+    color: red;
+    font-size: 0.8em;
+  }
+}
 </style>
