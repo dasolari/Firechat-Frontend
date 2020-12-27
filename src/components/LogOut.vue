@@ -31,11 +31,7 @@ export default {
         .default
         .auth()
         .onAuthStateChanged((user) => {
-          if (user) {
-            this.loggedIn = true;
-          } else {
-            this.loggedIn = false;
-          }
+          this.loggedIn = !!user;
         });
     }
   }

@@ -45,25 +45,27 @@ export default {
   methods: {
     async submit(event) {
       event.preventDefault();
-      const anotherUser = await firebase.default.auth().currentUser;
-      if (!anotherUser) {
-        try {
-          const { user } = await firebase.default.auth().signInWithEmailAndPassword(this.email, this.password);
-          localStorage.setItem('user', JSON.stringify(user));
-          console.log(user);
-          if (user.emailVerified) {
-            this.$router.replace({ name: 'Lobby' });
-          } else {
-            this.$emit('verify', 'Verify account');
-          }
-        } catch(err) {
-          this.error = err;
+      try {
+        const currentUser = await firebase.default.auth().currentUser;
+        if (currentUser && currentUser.email !== this.email) {
+          this.error = { message: 'Logout from your current account' };
           setTimeout(() => { this.error = ''; }, 8000);
+        } else if (currentUser && currentUser.emailVerified) {
+          this.error = { message: 'You are already logged in' };
+          setTimeout(() => { this.error = ''; }, 8000);
+        } else {
+          await this.signInUser();
         }
-      } else {
-        this.error = { message: 'Logout from your current account' };
+      } catch(err) {
+        this.error = err;
         setTimeout(() => { this.error = ''; }, 8000);
       }
+    },
+    async signInUser() {
+      const { user } = await firebase.default.auth().signInWithEmailAndPassword(this.email, this.password);
+      localStorage.setItem('user', JSON.stringify(user));
+      console.log(user);
+      user.emailVerified ? this.$router.replace({ name: 'Lobby' }) : this.$emit('verify', 'Verify account');
     }
   }
 };

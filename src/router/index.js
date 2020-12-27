@@ -1,6 +1,7 @@
 import Vue from 'vue';
 import VueRouter from 'vue-router';
 import Home from '../views/Home.vue';
+import Profile from '../views/Profile.vue';
 import Lobby from '../views/Lobby.vue';
 import * as firebase from 'firebase/app';
 import 'firebase/auth';
@@ -22,6 +23,12 @@ const routes = [
     component: () => import(/* webpackChunkName: "about" */ '../views/About.vue')
   },
   {
+    path: '/profile',
+    name: 'Profile',
+    component: Profile,
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/lobby',
     name: 'Lobby',
     component: Lobby,
@@ -37,7 +44,12 @@ router.beforeEach((to, from, next) => {
   const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
   const isAuthenticated = firebase.default.auth().currentUser;
   if (requiresAuth && (!isAuthenticated || !isAuthenticated.emailVerified)) {
-    next('/');
+    localStorage.setItem('routerAlert', 'To access these features, log in to your account or create one');
+    if (router.history.current.name === 'Home') {
+      window.location = '/';
+    } else {
+      next('/');
+    }
   } else {
     next();
   }

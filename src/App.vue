@@ -1,7 +1,9 @@
 <template>
   <div id="app">
     <div id="nav">
-      <p class="greet" v-if="username">Hello {{ username }}</p>
+      <div class="greet" v-if="username">
+        <router-link to="/profile" class="profile-link">Hello {{ username }}</router-link>
+      </div>
       <router-link to="/">Home</router-link> |
       <router-link to="/about">About</router-link> |
       <router-link to="/lobby">Lobby</router-link>
@@ -30,8 +32,6 @@ export default {
   },
   created() {
     this.setupFirebase();
-    // const user = JSON.parse(localStorage.getItem('user'));
-    // console.log(user);
   },
   updated() {
     this.setupFirebase();
@@ -75,7 +75,24 @@ export default {
   -moz-box-shadow: 2px 6px 9px -2px rgba(0,0,0,0.48);
   .greet {
     position: absolute;
-    margin: auto auto auto 20px;
+    left: 20px;
+    top: 10px;
+    padding: 10px;
+    border-radius: 5px;
+    transition: 150ms;
+    box-shadow: -2px 1px 7px 3px rgba(0,0,0,0.32);
+    &:hover {
+      box-shadow: -2px 1px 10px 4px rgba(0,0,0,0.5);
+      transition: 150ms;
+    }
+    .profile-link {
+      width: 100%;
+      padding: 10px;
+      border-radius: 5px;
+      &:hover {
+        text-decoration: none;
+      }
+    }
   }
   a {
     font-weight: bold;
@@ -90,5 +107,4 @@ export default {
     top: 15px;
   }
 }
-
 </style>

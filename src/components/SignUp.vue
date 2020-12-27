@@ -80,23 +80,26 @@ export default {
         submitAlert.style.display = 'inline';
         setTimeout(() => { submitAlert.style.display = 'none'; }, 3000);
       } else {
-        const anotherUser = await firebase.default.auth().currentUser;
-        if (!anotherUser) {
-          try {
-            const { user } = await firebase.default.auth().createUserWithEmailAndPassword(this.email, this.password);
-            await user.updateProfile({ displayName: this.username });
-            await user.sendEmailVerification();
-            localStorage.setItem('user', JSON.stringify(user));
-            this.$emit('created', 'Sent email');
-          } catch(err) {
-            this.error = err;
+        try {
+          const currentUser = await firebase.default.auth().currentUser;
+          if (currentUser) {
+            this.error = { message: 'Logout from your current account' };
             setTimeout(() => { this.error = ''; }, 8000);
+            return
           }
-        } else {
-          this.error = { message: 'Logout from your current account' };
+          await this.saveUser();
+        } catch(err) {
+          this.error = err;
           setTimeout(() => { this.error = ''; }, 8000);
         }
       }
+    },
+    async saveUser() {
+      const { user } = await firebase.default.auth().createUserWithEmailAndPassword(this.email, this.password);
+      await user.updateProfile({ displayName: this.username });
+      await user.sendEmailVerification();
+      localStorage.setItem('user', JSON.stringify(user));
+      this.$emit('created', 'Sent email');
     },
     validate() {
       const E = re.test(this.email);

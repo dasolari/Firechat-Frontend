@@ -1,12 +1,13 @@
 <template>
   <div class="home">
+    <p class="alert" :key="alert" v-if="alert">{{ alert }}</p>
     <div class="flip-container">
       <div class="flipcard">
         <div class="card-face card-face-front">
           <SignUp @created="flipCard" message="Create an account"/>
         </div>
         <div class="card-face card-face-back">
-          <LogIn @verify="showMessageAgain" message="Log into your account"/>
+          <LogIn @verify="showMessageAgain" message="Log into your account" :key="flipped" />
           <p class="verification-message" v-if="showVerificationMessage">We have sent you a verification email</p>
           <a class="verification-link" @click="sendVerificationEmail" v-if="showVerificationMessage">Didn't get one? Resend verification email</a>
         </div>
@@ -32,12 +33,16 @@ export default {
   data() {
     return {
       flipped: false,
-      showVerificationMessage: false
+      showVerificationMessage: false,
+      alert: ''
     }
   },
   components: {
     SignUp,
     LogIn
+  },
+  created() {
+    this.showAlert();
   },
   updated() {
     this.setupFirebase();
@@ -87,6 +92,16 @@ export default {
           }, 2000);
         }, 2000);
       }
+    },
+    showAlert() {
+      const alert = localStorage.getItem('routerAlert');
+      localStorage.removeItem('routerAlert');
+      if (alert) {
+        this.alert = alert;
+        setTimeout(() => {
+          this.alert = '';
+        }, 5000);
+      }
     }
   }
 };
@@ -96,6 +111,15 @@ export default {
 .home {
   .flipper {
     margin: 10px auto;
+  }
+  .alert {
+    color: red;
+    margin: 0 auto 5px auto;
+    width: fit-content;
+    padding: 2px;
+    font-size: 0.8em;
+    border-radius: 5px;
+    border: 1px solid red;
   }
 }
 .flip-container {
