@@ -1,11 +1,10 @@
 <template>
-  <b-button v-if="loggedIn" variant="outline-danger" @click="signOut">Logout</b-button>
+  <b-button v-if="isUserAuth" variant="outline-danger" @click="signOut">Logout</b-button>
 </template>
 
 <script>
-import * as firebase from 'firebase/app';
-import 'firebase/auth';
-
+import { mapGetters, mapActions } from "vuex";
+import { deleteCurrentUser } from '@/services/user-getter.js';
 export default {
   name: 'LogOut',
   data() {
@@ -14,25 +13,17 @@ export default {
     }
   },
   mounted() {
-    this.setupFirebase();
+    this.authAction();
+  },
+  computed: {
+    ...mapGetters(['isUserAuth'])
   },
   methods: {
-    async signOut() {
-      try {
-        await firebase.default.auth().signOut();
-        localStorage.removeItem('user');
-        window.location = '/';
-      } catch(err) {
-        console.log(err);
-      }
-    },
-    setupFirebase() {
-      firebase
-        .default
-        .auth()
-        .onAuthStateChanged((user) => {
-          this.loggedIn = !!user;
-        });
+    ...mapActions(['authAction', 'signOutAction']),
+    signOut() {
+      this.signOutAction();
+      deleteCurrentUser();
+      window.location = '/';
     }
   }
 }

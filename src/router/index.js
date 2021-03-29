@@ -44,7 +44,9 @@ router.beforeEach((to, from, next) => {
   const requiresAuth = to.matched.some((record) => record.meta.requiresAuth);
   const isAuthenticated = firebase.default.auth().currentUser;
   if (requiresAuth && (!isAuthenticated || !isAuthenticated.emailVerified)) {
-    localStorage.setItem('routerAlert', 'To access these features, log in to your account or create one');
+    if (!localStorage.getItem('alert')) {
+      localStorage.setItem('alert', 'To access these features, log in to your account or create one');
+    }
     if (router.history.current.name === 'Home') {
       window.location = '/';
     } else {

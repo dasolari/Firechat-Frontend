@@ -2,6 +2,7 @@
   <div class="form-container">
     <h2>{{ message }}</h2>
     <form>
+      <b-overlay :show="loading" no-wrap></b-overlay>
       <div class="group">
         <label for="username">Username:</label>
         <input type="text" id="username" name="username" maxLength="25" v-model="username" required />
@@ -28,13 +29,14 @@
         <b-button variant="outline-success" @click="submit">Sign Up</b-button>
       </div>
     </form>
-    <div class="error" v-if="error">{{ error.message }}</div>
+    <div class="error" v-if="getError">{{ getError }}</div>
   </div>
 </template>
 
 <script>
-import * as firebase from 'firebase/app';
-import 'firebase/auth';
+import firebase from 'firebase/app';
+import { mapActions, mapGetters } from "vuex";
+import { saveCurrentUser } from '@/services/user-getter.js';
 const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
 const pu = /[A-Z]/;
 const pn = /\d/;
@@ -52,10 +54,11 @@ export default {
       email: '',
       password: '',
       confirmPassword: '',
-      error: ''
+      loading: false
     }
   },
   computed: {
+    ...mapGetters(['getUser', 'getError']),
     invalidEmail() {
       return this.email && !(re.test(this.email));
     },
@@ -73,6 +76,7 @@ export default {
     }
   },
   methods: {
+    ...mapActions(['signUpAction']),
     async submit(event) {
       event.preventDefault();
       if (!this.validate()) {
@@ -80,26 +84,27 @@ export default {
         submitAlert.style.display = 'inline';
         setTimeout(() => { submitAlert.style.display = 'none'; }, 3000);
       } else {
-        try {
-          const currentUser = await firebase.default.auth().currentUser;
-          if (currentUser) {
-            this.error = { message: 'Logout from your current account' };
-            setTimeout(() => { this.error = ''; }, 8000);
-            return
-          }
-          await this.saveUser();
-        } catch(err) {
-          this.error = err;
-          setTimeout(() => { this.error = ''; }, 8000);
+        const currentUser = await firebase.auth().currentUser;
+        if (currentUser) {
+          this.$store.commit('setError', 'Logout from your current account');
+          return
         }
+        this.saveUser();
       }
     },
-    async saveUser() {
-      const { user } = await firebase.default.auth().createUserWithEmailAndPassword(this.email, this.password);
-      await user.updateProfile({ displayName: this.username });
-      await user.sendEmailVerification();
-      localStorage.setItem('user', JSON.stringify(user));
-      this.$emit('created', 'Sent email');
+    saveUser() {
+      this.loading = true;
+      this.signUpAction({ email: this.email, password: this.password });
+      setTimeout(async () => {
+        const user = await firebase.auth().currentUser;
+        if (user) {
+          saveCurrentUser(user);
+          await user.updateProfile({ displayName: this.username });
+          await user.sendEmailVerification();
+          this.$emit('created', 'Sent email');
+        }
+        this.loading = false;
+      }, 1000);
     },
     validate() {
       const E = re.test(this.email);

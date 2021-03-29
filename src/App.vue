@@ -1,8 +1,8 @@
 <template>
   <div id="app">
     <div id="nav">
-      <div class="greet" v-if="username">
-        <router-link to="/profile" class="profile-link">Hello {{ username }}</router-link>
+      <div class="greet" :key="username" v-if="isUserAuth">
+        <router-link to="/profile" class="profile-link">Hello {{ getUser.displayName }}</router-link>
       </div>
       <router-link to="/">Home</router-link> |
       <router-link to="/about">About</router-link> |
@@ -11,15 +11,14 @@
         <LogOut />
       </div>
     </div>
-    <h1 v-if="!username">Welcome to Firechat</h1>
-    <hr v-if="!username">
+    <h1 v-if="!isUserAuth">Welcome to Firechat</h1>
+    <hr v-if="!isUserAuth">
     <router-view/>
   </div>
 </template>
 
 <script>
-import * as firebase from 'firebase/app';
-import 'firebase/auth';
+import { mapGetters, mapActions } from "vuex";
 import LogOut from '@/components/LogOut.vue';
 export default {
   components: {
@@ -27,32 +26,24 @@ export default {
   },
   data() {
     return {
-      username: ''
+      username: '',
+      photoURL: ''
     }
   },
-  created() {
-    this.setupFirebase();
+  mounted() {
+    this.authAction();
+    this.$events.$on('changedUsername', (data) => {
+      this.username = data;
+    });
+    this.$events.$on('changedPhotoURL', (data) => {
+      this.photoURL = data;
+    });
   },
-  updated() {
-    this.setupFirebase();
+  computed: {
+    ...mapGetters(['getUser', 'isUserAuth'])
   },
   methods: {
-    setupFirebase() {
-      const user = JSON.parse(localStorage.getItem('user'));
-      if (user) {
-        this.username = user.displayName;
-      } else {
-        firebase
-          .default
-          .auth()
-          .onAuthStateChanged((user) => {
-            if (user) {
-              localStorage.setItem('user', JSON.stringify(user));
-              this.username = user.displayName;
-            }
-        });
-      }
-    }
+    ...mapActions(['authAction'])
   }
 }
 </script>

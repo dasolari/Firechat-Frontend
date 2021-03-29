@@ -3,25 +3,33 @@
     <h2>Your Profile</h2>
     <div class="attributes-container">
       <div class="image-flip">
-        <div class="avatar-flip">
-          <img src="https://res.cloudinary.com/cloudiegosm/image/upload/v1600821767/DSM_scrbkr.jpg" height="150" width="150">
-          <img src="https://res.cloudinary.com/cloudiegosm/image/upload/v1608956128/Upload_2_ltis4q.png" height="150" width="150">
+        <div class="avatar-flip" @click="choosePhoto">
+          <img v-if="photoURL" :src="photoURL" height="200" width="200">
+          <img v-else src="https://res.cloudinary.com/cloudiegosm/image/upload/v1609270714/Profile2_sewzr6.png" height="200" width="200">
+          <img src="https://res.cloudinary.com/cloudiegosm/image/upload/v1608956128/Upload_2_ltis4q.png" height="200" width="200">
+          <input id="fileUpload" type="file" accept="image/*" @change="handleFile" hidden/>
         </div>
       </div>
       <h2>{{ username }}</h2>
       <EditField type="username" :key="username" v-bind:value="username" @usernameChange="handleUsernameChange" />
       <EditField type="email" :key="email" v-bind:value="email" @emailChange="handleEmailChange" />
       <EditPasswordField :key="password" v-bind:value="password" @passwordChange="handlePasswordChange" />
-      <b-button v-if="somethingChanged" class="save-changes" variant="success" @click="saveChanges">Save Changes</b-button>
+      <div class="button-container">
+        <b-overlay :show="fileProgress !== null" rounded opacity="0.6" spinner-small spinner-variant="primary" class="d-inline-block">
+          <b-button v-if="somethingChanged" class="save-changes" variant="success" @click="saveChanges">Save Changes</b-button>
+        </b-overlay>
+      </div>
     </div>
     <b-button variant="danger" @click="deleteAccount">Delete Account</b-button>
-    <p v-if="error" class="error-alert">{{ error.message }}</p>
+    <p v-if="getError" class="error-alert">{{ getError }}</p>
   </div>
 </template>
 
 <script>
-import * as firebase from 'firebase/app';
-import 'firebase/auth';
+import firebase from 'firebase/app';
+import 'firebase/storage';
+import { mapGetters, mapActions } from "vuex";
+import { getCurrentUser } from '@/services/user-getter.js';
 import EditField from '@/components/EditField.vue';
 import EditPasswordField from '@/components/EditPasswordField.vue';
 export default {
@@ -31,24 +39,29 @@ export default {
     EditPasswordField
   },
   data() {
-    const user = JSON.parse(localStorage.getItem('user'));
+    const user = getCurrentUser();
     return {
       oldUsername: user.displayName,
       oldEmail: user.email,
       oldPassword: 'Password123',
-      oldPhotoUrl: user.photoUrl,
+      oldPhotoURL: user.photoURL,
       username: user.displayName,
       email: user.email,
       password: 'Password123',
-      photoUrl: user.photoUrl,
+      photoURL: user.photoURL,
+      imageData: null,
       somethingChanged: false,
-      error: ''
+      fileProgress: null
     }
   },
   updated() {
     this.checkForChanges();
   },
+  computed: {
+    ...mapGetters(['getUser', 'getError'])
+  },
   methods: {
+    ...mapActions(['authAction']),
     handleUsernameChange(value) {
       this.username = value;
     },
@@ -62,17 +75,32 @@ export default {
       if ((this.oldUsername !== this.username) ||
           (this.oldEmail !== this.email) ||
           (this.oldPassword !== this.password) ||
-          (this.oldPhotoUrl !== this.photoUrl)) {
+          (this.oldPhotoURL !== this.photoURL)) {
             this.somethingChanged = true;
       } else {
         this.somethingChanged = false;
       }
     },
+    choosePhoto() {
+      document.getElementById('fileUpload').click();
+    },
+    handleFile(event) {
+      this.imageData = event.target.files[0];
+      if (event.target.files && event.target.files[0]) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          this.photoURL = e.target.result;
+        };
+        reader.readAsDataURL(event.target.files[0]);
+    }
+    },
     async saveChanges() {
-      const user = await firebase.default.auth().currentUser;
+      const user = await firebase.auth().currentUser;
+      let photoChanged = false;
       if (this.oldUsername !== this.username) {
         this.updateUsername(user);
         this.oldUsername = this.username;
+        this.$events.$emit('changedUsername', this.username);
       }
       if (this.oldEmail !== this.email) {
         this.updateEmail(user);
@@ -82,51 +110,63 @@ export default {
         this.updatePassword(user);
         this.oldPassword = this.password;
       }
-      if (this.oldPhotoUrl !== this.photoUrl) {
-        this.updatePhotoUrl(user);
-        this.oldPhotoUrl = this.photoUrl;
+      if (this.oldPhotoURL !== this.photoURL) {
+        photoChanged = true;
+        this.updatePhotoURL(user);
+        this.oldPhotoURL = this.photoURL;
+        this.$events.$emit('changedPhotoURL', this.photoURL);
       }
-      firebase
-        .default
-        .auth()
-        .onAuthStateChanged((user) => {
-          if (user) {
-            this.somethingChanged = false;
-            localStorage.removeItem('user');
-            window.location = '/';
-          }
-      });
+      this.authAction();
+      setTimeout(() => {
+        if (!photoChanged) window.location.reload();
+      }, 500);
     },
     async updateUsername(user) {
       try {
         await user.updateProfile({ displayName: this.username });
       } catch(err) {
-        this.error = err; setTimeout(() => this.error = '', 5000);
+        this.$store.commit('setError', err.message);
       }
     },
     async updateEmail(user) {
       try {
         await user.updateEmail(this.email);
       } catch(err) {
-        this.error = err; setTimeout(() => this.error = '', 5000);
+        this.$store.commit('setError', err.message);
       }
     },
     async updatePassword(user) {
       try {
+        localStorage.setItem('alert', 'Logged out for security reasons, but your password was changed successfully');
         await user.updatePassword(this.password);
       } catch(err) {
-        this.error = err; setTimeout(() => { this.error = '' }, 5000);
+        this.$store.commit('setError', err.message);
       }
     },
-    async updatePhotoUrl(user) {
+    updatePhotoURL(user) {
       try {
-        await user.updateProfile({ photoURL: this.photoUrl });
+        const storageRef = firebase.storage().ref(`profile-pictures/${this.imageData.name}`);
+        const uploadTask = storageRef.put(this.imageData);
+        uploadTask.on(`state_changed`, (snapshot) => {
+          this.fileProgress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        },
+        (error) => {
+          console.log(error);
+        },
+        () => {
+          uploadTask.snapshot.ref.getDownloadURL()
+          .then(async (url) => {
+            this.photoURL = url;
+            await user.updateProfile({ photoURL: url });
+            this.fileProgress = null;
+          });
+        });
       } catch(err) {
-        this.error = err; setTimeout(() => this.error = '', 5000);
+        this.$store.commit('setError', err.message);
       }
     },
     async deleteAccount() {
-      const user = firebase.default.auth().currentUser;
+      const user = await firebase.default.auth().currentUser;
       const confirmation = confirm('Are you sure?');
       try {
         if (confirmation) {
@@ -134,7 +174,7 @@ export default {
           this.$router.replace({ name: 'Home' });
         }
       } catch(err) {
-        this.error = err; setTimeout(() => this.error = '', 5000);
+        this.$store.commit('setError', err.message);
       }
     }
   }
@@ -202,10 +242,14 @@ export default {
       margin: -45px 0 15px;
       color: #333;
     }
-    .save-changes {
+    .button-container {
       position: absolute;
-      bottom: -17px;
       right: 25px;
+      bottom: -20px;
+      b-overlay {
+        margin: 0;
+        padding: 0;
+      }
     }
   }
   .error-alert {

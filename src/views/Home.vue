@@ -8,8 +8,8 @@
         </div>
         <div class="card-face card-face-back">
           <LogIn @verify="showMessageAgain" message="Log into your account" :key="flipped" />
-          <p class="verification-message" v-if="showVerificationMessage">We have sent you a verification email</p>
-          <a class="verification-link" @click="sendVerificationEmail" v-if="showVerificationMessage">Didn't get one? Resend verification email</a>
+          <p class="verification-message" v-if="isUserAuth && !getUser.emailVerified">We have sent you a verification email</p>
+          <a class="verification-link" @click="sendVerificationEmail" v-if="isUserAuth && !getUser.emailVerified">Didn't get one? Resend verification email</a>
         </div>
       </div>
     </div>
@@ -23,8 +23,8 @@
 </template>
 
 <script>
-import * as firebase from 'firebase/app';
-import 'firebase/auth';
+import firebase from 'firebase/app';
+import { mapGetters } from "vuex";
 import SignUp from '@/components/SignUp.vue';
 import LogIn from '@/components/LogIn.vue';
 
@@ -33,7 +33,6 @@ export default {
   data() {
     return {
       flipped: false,
-      showVerificationMessage: false,
       alert: ''
     }
   },
@@ -41,11 +40,11 @@ export default {
     SignUp,
     LogIn
   },
+  computed: {
+    ...mapGetters(['getUser', 'isUserAuth'])
+  },
   created() {
     this.showAlert();
-  },
-  updated() {
-    this.setupFirebase();
   },
   methods: {
     flipCard() {
@@ -56,27 +55,12 @@ export default {
       this.flipped ? this.flipped = false : this.flipped = true;
     },
     async sendVerificationEmail() {
-      const user = await firebase.default.auth().currentUser;
+      const user = await firebase.auth().currentUser;
       try {
         await user.sendEmailVerification();
       } catch(err) {
-        //pass
-      }
-    },
-    setupFirebase() {
-      const user = JSON.parse(localStorage.getItem('user'));
-      if (user) {
-        this.showVerificationMessage = !user.emailVerified;
-      } else {
-        firebase
-          .default
-          .auth()
-          .onAuthStateChanged((user) => {
-            if (user) {
-              localStorage.setItem('user', JSON.stringify(user));
-              this.showVerificationMessage = !user.emailVerified;
-            }
-        });
+        localStorage.setItem('alert', err.message);
+        this.showAlert();
       }
     },
     showMessageAgain() {
@@ -94,13 +78,11 @@ export default {
       }
     },
     showAlert() {
-      const alert = localStorage.getItem('routerAlert');
-      localStorage.removeItem('routerAlert');
+      const alert = localStorage.getItem('alert');
+      localStorage.removeItem('alert');
       if (alert) {
         this.alert = alert;
-        setTimeout(() => {
-          this.alert = '';
-        }, 5000);
+        setTimeout(() => { this.alert = ''; }, 5000);
       }
     }
   }

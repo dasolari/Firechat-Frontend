@@ -14,13 +14,14 @@
         <b-button variant="outline-success" @click="submit">Log In</b-button>
       </div>
     </form>
-    <div class="error" v-if="error">{{ error.message }}</div>
+    <div class="error" v-if="getError">{{ getError }}</div>
   </div>
 </template>
 
 <script>
-import * as firebase from 'firebase/app';
-import 'firebase/auth';
+import firebase from 'firebase/app';
+import { mapActions, mapGetters } from "vuex";
+import { saveCurrentUser } from '@/services/user-getter.js';
 export default {
   name: 'LogIn',
   props: {
@@ -33,39 +34,49 @@ export default {
     return {
       email: '',
       password: '',
-      error: ''
+      loading: false
     }
+  },
+  computed: {
+    ...mapGetters(['getUser', 'getError'])
   },
   created() {
-    let user = JSON.parse(localStorage.getItem('user'));
-    if (user) {
-      this.email = user.email;
-    }
+    this.setCurrentMail();
+  },
+  updated() {
+    this.setCurrentMail();
   },
   methods: {
-    async submit(event) {
-      event.preventDefault();
-      try {
-        const currentUser = await firebase.default.auth().currentUser;
-        if (currentUser && currentUser.email !== this.email) {
-          this.error = { message: 'Logout from your current account' };
-          setTimeout(() => { this.error = ''; }, 8000);
-        } else if (currentUser && currentUser.emailVerified) {
-          this.error = { message: 'You are already logged in' };
-          setTimeout(() => { this.error = ''; }, 8000);
-        } else {
-          await this.signInUser();
-        }
-      } catch(err) {
-        this.error = err;
-        setTimeout(() => { this.error = ''; }, 8000);
+    ...mapActions(['logInAction']),
+    async setCurrentMail() {
+      let user;
+      if (!this.email) user = await firebase.auth().currentUser;
+      if (user) {
+        this.email = user.email;
       }
     },
-    async signInUser() {
-      const { user } = await firebase.default.auth().signInWithEmailAndPassword(this.email, this.password);
-      localStorage.setItem('user', JSON.stringify(user));
-      console.log(user);
-      user.emailVerified ? this.$router.replace({ name: 'Lobby' }) : this.$emit('verify', 'Verify account');
+    async submit(event) {
+      event.preventDefault();
+      const currentUser = await firebase.auth().currentUser;
+      if (currentUser && currentUser.email !== this.email) {
+        this.$store.commit('setError', 'Logout from your current account');
+      } else if (currentUser && currentUser.emailVerified) {
+        this.$store.commit('setError', 'You are already logged in');
+      } else {
+        this.signInUser();
+      }
+    },
+    signInUser() {
+      this.loading = true;
+      this.logInAction({ email: this.email, password: this.password });
+      setTimeout(async () => {
+        const user = await firebase.auth().currentUser;
+        if (user) {
+          saveCurrentUser(user);
+          user.emailVerified ? this.$router.replace({ name: 'Lobby' }) : this.$emit('verify', 'Verify account');
+        }
+        this.loading = false;
+      }, 1000);
     }
   }
 };
