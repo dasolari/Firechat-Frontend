@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 import firebase from 'firebase/app';
 import 'firebase/auth';
 import 'firebase/storage';
@@ -5,13 +7,13 @@ import 'firebase/firestore';
 
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAP0IQFzk_JbijyXFWAEb8ct6qa6xxKTvg",
-  authDomain: "firechat-ac1af.firebaseapp.com",
-  projectId: "firechat-ac1af",
-  storageBucket: "firechat-ac1af.appspot.com",
-  messagingSenderId: "76796436814",
-  appId: "1:76796436814:web:15df939e4abdac4d5a3e1f",
-  measurementId: "G-5R5VZ88BRR"
+  apiKey: process.env.API_KEY,
+  authDomain: process.env.AUTH_DOMAIN,
+  projectId: process.env.PROJECT_ID,
+  storageBucket: process.env.STORAGE_BUCKET,
+  messagingSenderId: process.env.MESSAGING_SENDER_ID,
+  appId: process.env.APP_ID,
+  measurementId: process.env.MEASUREMENT_ID
 };
 
 firebase.initializeApp(firebaseConfig);
