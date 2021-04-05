@@ -2,6 +2,9 @@ const getters = {
   getUser(state) {
     return state.user;
   },
+  getDatabase(state) {
+    return state.db;
+  },
   isUserAuth(state) {
     return !!state.user;
   },
