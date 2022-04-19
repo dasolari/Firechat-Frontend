@@ -25,8 +25,8 @@
 <script>
 import firebase from 'firebase/app';
 import { mapGetters } from "vuex";
-import SignUp from '@/components/SignUp.vue';
-import LogIn from '@/components/LogIn.vue';
+import SignUp from '@/components/authenticationComponents/SignUp.vue';
+import LogIn from '@/components/authenticationComponents/LogIn.vue';
 
 export default {
   name: 'Home',

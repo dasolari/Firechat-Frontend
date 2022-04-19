@@ -1,0 +1,6 @@
+projectKey=IIC3745-Assignment-1
+serverUrl=http://localhost:9000
+serverVersion=9.0.1.46107
+dashboardUrl=http://localhost:9000/dashboard?id=IIC3745-Assignment-1
+ceTaskId=AXuzFiUpOJY9PG3j4hSP
+ceTaskUrl=http://localhost:9000/api/ce/task?id=AXuzFiUpOJY9PG3j4hSP

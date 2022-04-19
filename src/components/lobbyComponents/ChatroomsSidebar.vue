@@ -3,7 +3,7 @@
     <div class="chatrooms">
       <p v-if="rooms && !rooms.length">No rooms yet...</p>
       <div v-for="room in rooms" :key="room.id" v-chat-scroll="{always: false, smooth: true}">
-        <RoomDisplay v-bind:specs="room" @deleted="deleteRoom" />
+        <RoomDisplay v-bind:specs="room" @deleted="deleteRoom" @joined="joinRoom" />
       </div>
     </div>
     <div class="room-form">
@@ -15,7 +15,7 @@
         <b-form-group>
           <b-form-input v-model="form.capacity" type="number" placeholder="Capacity (30 max)" max="30" min="2" required></b-form-input>
         </b-form-group>
-        <b-button type="submit" variant="outline-primary">Create</b-button>
+        <b-button type="submit" variant="outline-success">Create</b-button>
       </b-form>
     </div>
   </div>
@@ -93,6 +93,9 @@ export default {
       } catch (error) {
         console.log;
       }
+    },
+    joinRoom(id) {
+      this.$emit('joined', id);
     }
   }
 };
@@ -100,15 +103,13 @@ export default {
 
 <style lang="scss" scoped>
 .chatrooms {
-  width: 28%;
   height: 50vh;
   overflow-y: scroll;
   background-color: rgb(228, 222, 222);
   border-radius: 5px;
-  border: 1px solid lightgray;
+  border: 3px outset lightgray;
 }
 .room-form {
-  width: 28%;
   margin-top: 10px;
 }
 </style>

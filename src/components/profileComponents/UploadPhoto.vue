@@ -6,6 +6,7 @@
 </template>
 
 <script>
+// Mising: delete photo from firebase when user changes it
 import firebase from 'firebase/app';
 export default {
   name: 'UploadPhoto',

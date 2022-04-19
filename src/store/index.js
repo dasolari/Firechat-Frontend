@@ -8,7 +8,7 @@ import getters from "./getters";
 Vue.use(Vuex);
 
 const initialState = () => {
-  return { user: null, error: null, db: null };
+  return { user: null, error: null, db: null, currentRoom: null };
 };
 
 export default new Vuex.Store({
