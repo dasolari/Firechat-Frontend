@@ -10,6 +10,9 @@ const getters = {
   },
   getError(state) {
     return state.error;
+  },
+  getCurrentRoom(state) {
+    return state.currentRoom;
   }
 };
 

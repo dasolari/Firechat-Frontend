@@ -1,5 +1,6 @@
 <template>
   <div class="name-container">
+    <div class="clickable" @click="joinRoom"></div>
     <p class="name">
       {{ this.specs.name }}
     </p>
@@ -40,6 +41,10 @@ export default {
   methods: {
     deleteRoom() {
       this.$emit('deleted', this.specs.id);
+    },
+    joinRoom() {
+      this.$store.commit('setCurrentRoom', this.specs);
+      this.$emit('joined', this.specs.id);
     }
   }
 };
@@ -51,7 +56,7 @@ export default {
   margin: 5px 7px;
   padding: 5px;
   border-radius: 5px;
-  background-color: rgba(228, 150, 25, 0.842);
+  background-color: #42b983;
   box-shadow: 1px 0px 3px 1px rgba(0,0,0,0.35);
   &:active {
     box-shadow: 1px 0px 6px 1px rgba(0,0,0,0.35);
@@ -60,6 +65,13 @@ export default {
     .delete {
       visibility: visible;
     }
+  }
+  .clickable {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 90%;
+    height: 100%;
   }
   p {
     padding: 0;

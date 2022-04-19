@@ -30,8 +30,8 @@ import firebase from 'firebase/app';
 import 'firebase/storage';
 import { mapGetters, mapActions } from "vuex";
 import { getCurrentUser } from '@/services/user-getter.js';
-import EditField from '@/components/EditField.vue';
-import EditPasswordField from '@/components/EditPasswordField.vue';
+import EditField from '@/components/profileComponents/EditField.vue';
+import EditPasswordField from '@/components/profileComponents/EditPasswordField.vue';
 export default {
   name: 'Profile',
   components: {

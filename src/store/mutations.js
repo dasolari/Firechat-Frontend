@@ -5,6 +5,9 @@ const mutations = {
   setError(state, payload) {
     state.error = payload;
     setTimeout(() => { state.error = null; }, 6500);
+  },
+  setCurrentRoom(state, payload) {
+    state.currentRoom = payload;
   }
 };
 

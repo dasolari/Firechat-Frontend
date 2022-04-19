@@ -19,7 +19,7 @@
 
 <script>
 import { mapGetters, mapActions } from "vuex";
-import LogOut from '@/components/LogOut.vue';
+import LogOut from '@/components/authenticationComponents/LogOut.vue';
 export default {
   components: {
     LogOut
